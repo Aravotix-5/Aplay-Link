@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+
+  <!--
+    Mobile-first viewport tuned for iPhone 16 Pro Max and other modern
+    iOS devices. viewport-fit=cover lets the app draw edge-to-edge and
+    respect the safe-area insets we use throughout styles.css.
+  -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+
+  <!-- iOS "installed app" affordances (Add to Home Screen) -->
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="theme-color" content="#0F1A24" />
+
+  <title>A-Play Dashboard</title>
+
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+  <!-- ============================================================
+       AMBIENT BACKGROUND
+       Purely decorative, sits behind everything (see styles.css).
+  ============================================================ -->
+  <div class="ambient-bg" aria-hidden="true"></div>
+
+  <!-- ============================================================
+       BOOT / LOADING OVERLAY
+       Shown immediately on load and while app.js waits to hear back
+       from Firebase Auth about whether a session already exists.
+       app.js is responsible for hiding this (class "hidden") once
+       the auth state listener has resolved.
+  ============================================================ -->
+  <div id="loadingOverlay" class="loading-overlay">
+    <div class="loading-mark">A-Play</div>
+    <div class="loading-spinner" role="status" aria-label="Loading"></div>
+  </div>
+
+  <!-- ============================================================
+       APP SHELL
+       Everything the user actually interacts with lives here.
+  ============================================================ -->
+  <div id="app" class="app-shell hidden">
+
+    <!-- ---------- Top bar: brand + authenticated user chip ---------- -->
+    <header id="topBar" class="top-bar glass">
+      <div class="brand">
+        <span class="brand-mark">A-Play</span>
+        <span class="brand-sub">by Aravotix</span>
+      </div>
+
+      <!-- Populated by app.js once a user document is loaded from Firestore -->
+      <div id="userChip" class="user-chip hidden">
+        <div class="user-chip-text">
+          <span id="userChipName" class="user-chip-name">—</span>
+          <span id="userChipRole" class="user-chip-role">—</span>
+        </div>
+        <button id="signOutBtn" type="button" class="icon-btn" aria-label="Sign out">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+            <path d="M16 17l5-5-5-5"/>
+            <path d="M21 12H9"/>
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- ---------- Main view root ----------
+         Exactly one of these sections is visible at a time. app.js
+         toggles the "active" class based on (a) auth state and
+         (b) the "role" field on the signed-in user's Firestore
+         document (users/{uid}.role: "owner" | "staff" | "parent" | "guest").
+    -->
+    <main id="viewRoot" class="view-root">
+
+      <!-- ============================================================
+           VIEW: AUTHENTICATION
+           Firebase Authentication (email/password) handles the actual
+           sign-in. Firestore holds the profile + role for each uid.
+           New sign-ups always land as role "parent" — Owner and Staff
+           accounts are provisioned directly in Firestore/Firebase
+           console by the resort, not through public self-registration.
+      ============================================================ -->
+      <section id="view-auth" class="view active" data-view="auth">
+        <div class="auth-shell">
+          <div class="auth-brand">
+            <div class="auth-eyebrow">Welcome</div>
+            <div class="auth-title">A-Play Dashboard</div>
+            <div class="auth-subtitle">Sign in to manage check-ins, passes, and the storefront.</div>
+          </div>
+
+          <!-- Login / Register toggle -->
+          <div class="segmented" id="authModeToggle" role="tablist">
+            <button type="button" class="segmented-btn active" data-mode="login" role="tab" aria-selected="true">Sign In</button>
+            <button type="button" class="segmented-btn" data-mode="register" role="tab" aria-selected="false">Create Account</button>
+          </div>
+
+          <!-- ---------- Sign-in form ---------- -->
+          <form id="loginForm" class="auth-card glass" novalidate>
+            <div class="field">
+              <label for="loginEmail">Email</label>
+              <input type="email" id="loginEmail" name="email" autocomplete="email" placeholder="you@example.com" required />
+            </div>
+            <div class="field">
+              <label for="loginPassword">Password</label>
+              <input type="password" id="loginPassword" name="password" autocomplete="current-password" placeholder="Your password" required />
+            </div>
+            <div class="field-error" id="loginFormError" role="alert"></div>
+            <button type="submit" id="loginSubmitBtn" class="btn btn-primary">Sign In</button>
+            <button type="button" id="forgotPasswordBtn" class="btn btn-link">Forgot password?</button>
+
+            <div class="auth-divider"><span>or</span></div>
+
+            <!--
+              Google OAuth sign-in. First-time Google sign-ins are
+              provisioned as role "parent" in Firestore by app.js,
+              same as email/password self-registration — see the
+              footnote below.
+            -->
+            <button type="button" id="googleSignInBtn" class="btn btn-google">
+              <svg viewBox="0 0 18 18" width="18" height="18" aria-hidden="true">
+                <path fill="#4285F4" d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84a4.14 4.14 0 0 1-1.8 2.72v2.26h2.92c1.7-1.57 2.68-3.88 2.68-6.62z"/>
+                <path fill="#34A853" d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.92-2.26c-.81.54-1.85.86-3.04.86-2.34 0-4.32-1.58-5.03-3.7H.96v2.33A9 9 0 0 0 9 18z"/>
+                <path fill="#FBBC05" d="M3.97 10.72A5.4 5.4 0 0 1 3.68 9c0-.6.1-1.18.29-1.72V4.95H.96A9 9 0 0 0 0 9c0 1.45.35 2.83.96 4.05l3.01-2.33z"/>
+                <path fill="#EA4335" d="M9 3.58c1.32 0 2.51.45 3.44 1.35l2.58-2.58C13.46.89 11.43 0 9 0A9 9 0 0 0 .96 4.95l3.01 2.33C4.68 5.16 6.66 3.58 9 3.58z"/>
+              </svg>
+              Sign in with Google
+            </button>
+          </form>
+
+          <!-- ---------- Registration form (role is always "parent") ---------- -->
+          <form id="registerForm" class="auth-card glass hidden" novalidate>
+            <div class="field">
+              <label for="registerFullName">Full Name</label>
+              <input type="text" id="registerFullName" name="fullName" autocomplete="name" placeholder="e.g. Renata Ibarra" required />
+            </div>
+            <div class="field">
+              <label for="registerPhone">Phone Number</label>
+              <input type="tel" id="registerPhone" name="phone" autocomplete="tel" placeholder="e.g. (555) 214-7790" required />
+            </div>
+            <div class="field">
+              <label for="registerEmail">Email</label>
+              <input type="email" id="registerEmail" name="email" autocomplete="email" placeholder="you@example.com" required />
+            </div>
+            <div class="field">
+              <label for="registerPassword">Choose a Password</label>
+              <input type="password" id="registerPassword" name="password" autocomplete="new-password" placeholder="At least 8 characters" required minlength="8" />
+            </div>
+            <div class="field-error" id="registerFormError" role="alert"></div>
+            <button type="submit" id="registerSubmitBtn" class="btn btn-primary">Create Account</button>
+          </form>
+
+          <p class="auth-footnote">
+            Owner and Staff accounts are provisioned by A-Play front-desk administration and are not created here.
+          </p>
+        </div>
+      </section>
+
+      <!-- ============================================================
+           VIEW: OWNER CONTROL CENTER
+           Full visibility: staff roster, resort-wide inventory,
+           revenue/telemetry, and account administration.
+      ============================================================ -->
+      <section id="view-owner" class="view dashboard" data-view="owner" data-role="owner" hidden>
+        <div class="view-header">
+          <div class="view-eyebrow">Owner Control Center</div>
+          <div class="view-title">Resort Overview</div>
+          <div class="view-subtitle">Live telemetry and administration across every zone.</div>
+        </div>
+
+        <!-- Executive stat grid — populated from Firestore aggregate docs -->
+        <div class="stat-grid" id="ownerStatGrid">
+          <div class="stat-card glass">
+            <div class="stat-label">Guests Checked In</div>
+            <div class="stat-value" id="ownerStatGuests">—</div>
+          </div>
+          <div class="stat-card glass">
+            <div class="stat-label">Staff On Duty</div>
+            <div class="stat-value" id="ownerStatStaff">—</div>
+          </div>
+          <div class="stat-card glass">
+            <div class="stat-label">Today's Revenue</div>
+            <div class="stat-value" id="ownerStatRevenue">—</div>
+          </div>
+          <div class="stat-card glass">
+            <div class="stat-label">Inventory Items</div>
+            <div class="stat-value" id="ownerStatInventory">—</div>
+          </div>
+        </div>
+
+        <!--
+          Anchor id matches the "Staff" tab-bar button's data-target
+          ("owner-staff") so app.js's scrollIntoView fallback lands here
+          instead of failing with a "not available yet" toast.
+        -->
+        <div id="owner-staff">
+          <div class="section-divider">Staff Roster</div>
+          <div class="card glass">
+            <!-- app.js renders one .roster-row per staff document in Firestore (users where role == "staff") -->
+            <div id="ownerStaffList" class="roster-list" data-empty-label="No staff accounts on file yet."></div>
+            <button type="button" id="ownerInviteStaffBtn" class="btn btn-secondary">Invite Staff Member</button>
+          </div>
+        </div>
+
+        <!-- Anchor id matches the "Inventory" tab-bar button's data-target ("owner-inventory") -->
+        <div id="owner-inventory">
+          <div class="section-divider">Inventory Management</div>
+          <div class="card glass">
+            <div id="ownerInventoryList" class="inventory-list" data-empty-label="No inventory items on file yet."></div>
+            <button type="button" id="ownerAddInventoryBtn" class="btn btn-secondary">Add Inventory Item</button>
+          </div>
+        </div>
+
+        <!-- Anchor id matches the "Settings" tab-bar button's data-target ("owner-settings") -->
+        <div id="owner-settings">
+          <div class="section-divider">Account Administration</div>
+          <div class="card glass">
+            <p class="card-note">
+              Role changes, account suspension, and Firestore security rule administration are managed from this
+              panel. Destructive actions require the confirmation modal (see <code>#confirmModal</code> below).
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================================
+           VIEW: STAFF DASHBOARD
+           Front-of-house operations: check-in / check-out, active
+           guest roster, and a quick-reference inventory view.
+      ============================================================ -->
+      <section id="view-staff" class="view dashboard" data-view="staff" data-role="staff" hidden>
+        <div class="view-header">
+          <div class="view-eyebrow">Front Desk</div>
+          <div class="view-title">Staff Dashboard</div>
+          <div class="view-subtitle">Check guests in and out, and monitor today's activity.</div>
+        </div>
+
+        <div class="card glass">
+          <div class="card-title">Check-In / Check-Out</div>
+          <div class="field">
+            <label for="staffScanInput">Guest Phone or Pass ID</label>
+            <input type="text" id="staffScanInput" placeholder="Scan QR or type phone number" />
+          </div>
+          <div class="btn-row">
+            <button type="button" id="staffCheckInBtn" class="btn btn-primary">Check In</button>
+            <button type="button" id="staffCheckOutBtn" class="btn btn-secondary">Check Out</button>
+          </div>
+          <!-- Future QR code support: a camera-based scanner will populate #staffScanInput automatically. -->
+          <button type="button" id="staffQrScanBtn" class="btn btn-link" disabled>Scan QR Code (coming soon)</button>
+
+          <!--
+            Structured mockup of where the live camera scanner stream
+            will render once QR support ships. Reuses the existing
+            .qr-placeholder box treatment (see styles.css) sized up
+            into a viewport, so no new theme is introduced.
+          -->
+          <div class="qr-placeholder scanner-viewport" id="staffQrScannerMockup" aria-label="Camera scanner viewport placeholder">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/>
+              <path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/>
+              <rect x="8" y="8" width="8" height="8" rx="1"/>
+            </svg>
+            <span class="qr-placeholder-caption">Live camera scanner will render here</span>
+          </div>
+        </div>
+
+        <!-- Anchor id matches the "Guests" tab-bar button's data-target ("staff-guests") -->
+        <div id="staff-guests">
+          <div class="section-divider">Currently Checked In</div>
+          <div class="card glass">
+            <div id="staffActiveGuestList" class="roster-list" data-empty-label="No guests currently checked in."></div>
+          </div>
+        </div>
+
+        <!-- Anchor id matches the "Inventory" tab-bar button's data-target ("staff-inventory") -->
+        <div id="staff-inventory">
+          <div class="section-divider">Inventory Quick View</div>
+          <div class="card glass">
+            <div id="staffInventoryList" class="inventory-list" data-empty-label="No inventory items on file yet."></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================================
+           VIEW: PARENT DASHBOARD
+           A parent's own profile, their child's digital pass, and
+           check-in history.
+      ============================================================ -->
+      <section id="view-parent" class="view dashboard" data-view="parent" data-role="parent" hidden>
+        <div class="view-header">
+          <div class="view-eyebrow">Family</div>
+          <div class="view-title">Parent Dashboard</div>
+          <div class="view-subtitle">Your digital pass, child profile, and visit history.</div>
+        </div>
+
+        <div class="card glass digital-pass-card" id="parentDigitalPass">
+          <div class="digital-pass-label">Digital Pass</div>
+          <div class="digital-pass-name" id="parentPassChildName">—</div>
+          <div class="digital-pass-tier" id="parentPassTier">—</div>
+          <!-- Future QR code support: a real QR encoding the pass ID renders here in place of this icon -->
+          <div class="qr-placeholder" id="parentPassQr" aria-label="QR code placeholder">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
+              <rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3h-3zM20 14v3M14 20h3M20 20v.01"/>
+            </svg>
+            <span class="qr-placeholder-caption">Live QR renders here</span>
+          </div>
+        </div>
+
+        <!-- Anchor id matches the "Storefront" tab-bar button's data-target ("parent-storefront") -->
+        <div id="parent-storefront">
+          <div class="section-divider">Storefront</div>
+          <div class="card glass">
+            <p class="card-note">
+              The Snack Bar and Farm Stand storefront checkout is being built on top of the order logic already
+              wired up in <code>payment-wallet.js</code>. Once that view ships, items added here will flow straight
+              into your Cashier Ledger.
+            </p>
+          </div>
+        </div>
+
+        <div class="section-divider">Child Profile</div>
+        <div class="card glass">
+          <div class="profile-row"><span class="profile-row-label">Full Name</span><span class="profile-row-value" id="parentChildName">—</span></div>
+          <div class="profile-row"><span class="profile-row-label">Age</span><span class="profile-row-value" id="parentChildAge">—</span></div>
+          <div class="profile-row"><span class="profile-row-label">Weight</span><span class="profile-row-value" id="parentChildWeight">—</span></div>
+        </div>
+
+        <!-- Anchor id matches the "History" tab-bar button's data-target ("parent-history") -->
+        <div id="parent-history">
+          <div class="section-divider">Visit History</div>
+          <div class="card glass">
+            <div id="parentVisitHistory" class="roster-list" data-empty-label="No visits recorded yet."></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================================
+           VIEW: GUEST DASHBOARD
+           A lightweight, read-mostly view for drop-in guests without
+           a full parent/child profile on file.
+      ============================================================ -->
+      <section id="view-guest" class="view dashboard" data-view="guest" data-role="guest" hidden>
+        <div class="view-header">
+          <div class="view-eyebrow">Welcome</div>
+          <div class="view-title">Guest Dashboard</div>
+          <div class="view-subtitle">Your single-visit pass and today's zone information.</div>
+        </div>
+
+        <div class="card glass digital-pass-card" id="guestDigitalPass">
+          <div class="digital-pass-label">Single-Visit Pass</div>
+          <div class="digital-pass-name" id="guestPassName">—</div>
+          <div class="digital-pass-tier" id="guestPassTier">—</div>
+          <div class="qr-placeholder" id="guestPassQr" aria-label="QR code placeholder">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
+              <rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3h-3zM20 14v3M14 20h3M20 20v.01"/>
+            </svg>
+            <span class="qr-placeholder-caption">Live QR renders here</span>
+          </div>
+        </div>
+
+        <!-- Anchor id matches the "Zones" tab-bar button's data-target ("guest-zones") -->
+        <div id="guest-zones">
+          <div class="section-divider">Today's Zones</div>
+          <div class="card glass">
+            <div id="guestZoneInfo" class="card-note">Zone status loads once you're signed in.</div>
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- ---------- Bottom tab bar ----------
+         One nav element per role; app.js shows exactly the one that
+         matches the signed-in user's role and wires up its buttons.
+    -->
+    <nav id="tabBar-owner" class="tab-bar glass" data-role="owner" hidden>
+      <button type="button" class="tab-btn active" data-target="view-owner">Overview</button>
+      <button type="button" class="tab-btn" data-target="owner-staff">Staff</button>
+      <button type="button" class="tab-btn" data-target="owner-inventory">Inventory</button>
+      <button type="button" class="tab-btn" data-target="owner-settings">Settings</button>
+    </nav>
+
+    <nav id="tabBar-staff" class="tab-bar glass" data-role="staff" hidden>
+      <button type="button" class="tab-btn active" data-target="view-staff">Check-In</button>
+      <button type="button" class="tab-btn" data-target="staff-guests">Guests</button>
+      <button type="button" class="tab-btn" data-target="staff-inventory">Inventory</button>
+    </nav>
+
+    <nav id="tabBar-parent" class="tab-bar glass" data-role="parent" hidden>
+      <button type="button" class="tab-btn active" data-target="view-parent">Pass</button>
+      <button type="button" class="tab-btn" data-target="parent-storefront">Storefront</button>
+      <button type="button" class="tab-btn" data-target="parent-history">History</button>
+    </nav>
+
+    <nav id="tabBar-guest" class="tab-bar glass" data-role="guest" hidden>
+      <button type="button" class="tab-btn active" data-target="view-guest">Pass</button>
+      <button type="button" class="tab-btn" data-target="guest-zones">Zones</button>
+    </nav>
+
+  </div>
+
+  <!-- ============================================================
+       SHARED UI: TOAST
+       app.js exposes a single showToast(message) helper that all
+       modules (including payment-wallet.js) call into.
+  ============================================================ -->
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <!-- ============================================================
+       SHARED UI: CONFIRMATION MODAL
+       Used for any destructive action (removing staff, deleting
+       inventory, checking a guest out early, etc.).
+  ============================================================ -->
+  <div id="confirmModal" class="modal-backdrop hidden">
+    <div class="modal-card glass">
+      <div class="modal-title" id="confirmModalTitle">Are you sure?</div>
+      <div class="modal-body" id="confirmModalBody">This action cannot be undone.</div>
+      <div class="btn-row">
+        <button type="button" id="confirmModalCancelBtn" class="btn btn-secondary">Cancel</button>
+        <button type="button" id="confirmModalConfirmBtn" class="btn btn-danger">Confirm</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       APP SCRIPTS
+       Loaded as ES modules. app.js is the single entry point: it
+       initializes Firebase, wires up auth + Firestore listeners,
+       and imports payment-wallet.js internally once the wallet UI
+       is needed. Keeping one entry point avoids load-order bugs
+       between modules.
+  ============================================================ -->
+  <script type="module" src="app.js"></script>
+
+</body>
+</html>

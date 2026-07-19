@@ -1,0 +1,920 @@
+/* ============================================================
+   A-PLAY DASHBOARD — STYLESHEET
+   Theme: "Mediterranean Luxury Coast"
+     Navy   #0F1A24  — primary background / structural text
+     Sand   #F9F8F3  — card surfaces / interactive spaces
+     Gold   #C5A059 / #D4AF37 — accents, highlights, calls to action
+   Mobile-first, tuned for iPhone 16 Pro Max. Every rule below is
+   written for small screens first; there are no desktop overrides
+   because this is a front-desk / in-hand tool, not a marketing site.
+============================================================ */
+
+:root{
+  --navy:           #0F1A24;
+  --navy-deep:      #0A121A;
+  --sand:           #F9F8F3;
+  --sand-dim:       rgba(249, 248, 243, 0.68);
+  --gold:           #C5A059;
+  --gold-bright:    #D4AF37;
+  --gold-text:      #8a6a2f;
+  --danger:         #A6392F;
+  --success:        #2F7A57;
+
+  --glass-fill:     rgba(255, 255, 255, 0.88);
+  --glass-border:   rgba(255, 255, 255, 0.7);
+  --card-text:      #0F1A24;
+  --card-text-dim:  rgba(15, 26, 36, 0.62);
+
+  --ease-apple: cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* iOS safe-area insets, used by the top bar and bottom tab bar */
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* ============================================================
+   RESET
+============================================================ */
+*,
+*::before,
+*::after{
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html, body{
+  height: 100%;
+  overscroll-behavior: none;
+}
+
+body{
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Segoe UI", Roboto, sans-serif;
+  color: var(--sand);
+  background: var(--navy-deep);
+  min-height: 100vh;
+  width: 100%;
+  overflow-x: hidden;
+  position: relative;
+  -webkit-font-smoothing: antialiased;
+}
+
+button, input{
+  font-family: inherit;
+}
+
+img{
+  max-width: 100%;
+  display: block;
+}
+
+.hidden{
+  display: none !important;
+}
+
+::-webkit-scrollbar{
+  width: 0;
+  height: 0;
+}
+
+/* ============================================================
+   AMBIENT BACKGROUND
+   A quiet, slow-drifting gradient behind the entire app. Purely
+   decorative — sits at z-index -2 so it never intercepts taps.
+============================================================ */
+.ambient-bg{
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+  background-color: var(--navy-deep);
+  background-image:
+    radial-gradient(circle at 15% 15%, rgba(197, 160, 89, 0.16) 0%, transparent 45%),
+    radial-gradient(circle at 88% 12%, rgba(212, 175, 55, 0.10) 0%, transparent 50%),
+    radial-gradient(circle at 78% 82%, rgba(22, 35, 47, 0.9) 0%, transparent 55%),
+    radial-gradient(circle at 18% 88%, rgba(197, 160, 89, 0.08) 0%, transparent 40%);
+  background-repeat: no-repeat;
+  animation: driftBg 34s ease-in-out infinite alternate;
+}
+
+@keyframes driftBg{
+  0%   { background-position: 0% 0%, 100% 0%, 100% 100%, 0% 100%; }
+  100% { background-position: 8% 6%, 92% 8%, 92% 92%, 8% 92%; }
+}
+
+/* ============================================================
+   GLASSMORPHIC SURFACE
+   High-opacity fill is the WCAG-AA safety net: even if
+   backdrop-filter is unsupported, rgba(255,255,255,0.88) alone
+   still gives navy text on near-white a huge contrast margin.
+============================================================ */
+.glass{
+  background: var(--glass-fill);
+  background-color: var(--glass-fill);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid var(--glass-border);
+  box-shadow: 0 10px 34px rgba(10, 18, 26, 0.35);
+  color: var(--card-text);
+}
+
+/* ============================================================
+   LOADING OVERLAY
+   Shown while app.js waits on the Firebase Auth state listener.
+============================================================ */
+.loading-overlay{
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  background: var(--navy-deep);
+}
+
+.loading-mark{
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: var(--gold-bright);
+  text-transform: uppercase;
+}
+
+.loading-spinner{
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 3px solid rgba(249, 248, 243, 0.18);
+  border-top-color: var(--gold-bright);
+  animation: spin 0.9s linear infinite;
+}
+
+@keyframes spin{
+  to{ transform: rotate(360deg); }
+}
+
+/* ============================================================
+   APP SHELL
+============================================================ */
+.app-shell{
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  max-width: 100vw;
+}
+
+/* ---------- Top bar ---------- */
+.top-bar{
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: calc(14px + var(--safe-top)) 18px 14px 18px;
+  border-radius: 0 0 22px 22px;
+  border-top: none;
+}
+
+.brand{
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+}
+
+.brand-mark{
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  color: var(--navy);
+}
+
+.brand-sub{
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--card-text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.user-chip{
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.user-chip-text{
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  line-height: 1.25;
+}
+
+.user-chip-name{
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--navy);
+}
+
+.user-chip-role{
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--gold-text);
+}
+
+.icon-btn{
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  border: none;
+  background: rgba(15, 26, 36, 0.08);
+  color: var(--navy);
+  cursor: pointer;
+  transition: background 0.3s var(--ease-apple), transform 0.3s var(--ease-apple);
+}
+
+.icon-btn svg{
+  width: 18px;
+  height: 18px;
+}
+
+.icon-btn:active{
+  transform: scale(0.92);
+  background: rgba(166, 57, 47, 0.16);
+}
+
+/* ============================================================
+   VIEW ROOT / VIEWS
+   Exactly one .view carries the "active" class at a time.
+============================================================ */
+.view-root{
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px 18px calc(120px + var(--safe-bottom)) 18px;
+}
+
+.view{
+  display: none;
+  animation: viewIn 0.45s var(--ease-apple);
+}
+
+.view.active{
+  display: block;
+}
+
+@keyframes viewIn{
+  from{ opacity: 0; transform: translateY(12px) scale(0.99); }
+  to{ opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.view-header{
+  margin-bottom: 20px;
+}
+
+.view-eyebrow{
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--gold-bright);
+  margin-bottom: 6px;
+}
+
+.view-title{
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--sand);
+}
+
+.view-subtitle{
+  font-size: 13.5px;
+  color: var(--sand-dim);
+  margin-top: 4px;
+  line-height: 1.4;
+}
+
+.section-divider{
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 22px 0 12px 0;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--gold-bright);
+}
+
+.section-divider::after{
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: rgba(249, 248, 243, 0.18);
+}
+
+/* ============================================================
+   CARDS
+============================================================ */
+.card{
+  border-radius: 20px;
+  padding: 18px;
+  margin-bottom: 16px;
+}
+
+.card-title{
+  font-size: 15px;
+  font-weight: 800;
+  margin-bottom: 12px;
+  color: var(--navy);
+}
+
+.card-note{
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--card-text-dim);
+}
+
+.card-note code{
+  background: rgba(15, 26, 36, 0.08);
+  padding: 1px 6px;
+  border-radius: 6px;
+  font-size: 12px;
+}
+
+/* ============================================================
+   AUTHENTICATION VIEW
+============================================================ */
+.auth-shell{
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  padding-top: 24px;
+}
+
+.auth-brand{
+  text-align: center;
+  margin-bottom: 22px;
+}
+
+.auth-eyebrow{
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--gold-bright);
+  margin-bottom: 6px;
+}
+
+.auth-title{
+  font-size: 25px;
+  font-weight: 800;
+  color: var(--sand);
+  letter-spacing: -0.02em;
+}
+
+.auth-subtitle{
+  font-size: 13px;
+  color: var(--sand-dim);
+  margin-top: 6px;
+  line-height: 1.4;
+}
+
+.segmented{
+  display: flex;
+  border-radius: 14px;
+  overflow: hidden;
+  border: 1px solid rgba(249, 248, 243, 0.25);
+  margin-bottom: 16px;
+}
+
+.segmented-btn{
+  flex: 1;
+  border: none;
+  padding: 12px;
+  font-size: 13.5px;
+  font-weight: 700;
+  background: rgba(249, 248, 243, 0.06);
+  color: var(--sand-dim);
+  cursor: pointer;
+  transition: background 0.3s var(--ease-apple), color 0.3s var(--ease-apple);
+}
+
+.segmented-btn.active{
+  background: var(--gold-bright);
+  color: var(--navy);
+}
+
+.auth-card{
+  border-radius: 22px;
+  padding: 22px;
+  margin-bottom: 14px;
+}
+
+/* "or" divider between email/password and Google sign-in */
+.auth-divider{
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 16px 0;
+  color: var(--card-text-dim);
+  font-size: 11.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.auth-divider::before,
+.auth-divider::after{
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: rgba(15, 26, 36, 0.15);
+}
+
+/* Google sign-in button follows Google's brand guideline of a
+   neutral (white) surface with full-color logo — deliberately
+   distinct from .btn-primary so it reads as a separate identity
+   provider, not a duplicate "submit" action. */
+.btn-google{
+  background: #ffffff;
+  color: #1f1f1f;
+  border: 1px solid rgba(15, 26, 36, 0.18);
+}
+
+.btn-google:active{
+  background: #f5f5f5;
+}
+
+.auth-footnote{
+  font-size: 12px;
+  color: var(--sand-dim);
+  text-align: center;
+  line-height: 1.5;
+  margin-top: 4px;
+  padding: 0 8px;
+}
+
+/* ============================================================
+   FORM FIELDS
+============================================================ */
+.field{
+  margin-bottom: 14px;
+}
+
+.field label{
+  display: block;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--card-text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 6px;
+}
+
+.field input[type="text"],
+.field input[type="tel"],
+.field input[type="email"],
+.field input[type="password"],
+.field input[type="number"]{
+  width: 100%;
+  padding: 13px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(15, 26, 36, 0.18);
+  background: rgba(15, 26, 36, 0.04);
+  color: var(--navy);
+  font-size: 15px;
+  outline: none;
+  transition: border 0.3s var(--ease-apple), background 0.3s var(--ease-apple);
+}
+
+.field input::placeholder{
+  color: rgba(15, 26, 36, 0.35);
+}
+
+.field input:focus{
+  border-color: var(--gold);
+  background: rgba(197, 160, 89, 0.08);
+}
+
+.field-error{
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--danger);
+  margin: -4px 0 12px 0;
+  min-height: 0;
+  display: none;
+}
+
+.field-error:not(:empty){
+  display: block;
+}
+
+/* ============================================================
+   BUTTONS
+============================================================ */
+.btn{
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 14px 20px;
+  border-radius: 16px;
+  border: none;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.3s var(--ease-apple), opacity 0.3s var(--ease-apple), background 0.3s var(--ease-apple);
+}
+
+.btn:active{
+  transform: scale(0.97);
+}
+
+.btn:disabled{
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.btn-primary{
+  background: linear-gradient(180deg, var(--gold-bright) 0%, var(--gold) 100%);
+  color: var(--navy);
+}
+
+.btn-secondary{
+  background: rgba(15, 26, 36, 0.08);
+  color: var(--navy);
+  border: 1px solid rgba(15, 26, 36, 0.18);
+}
+
+.btn-danger{
+  background: var(--danger);
+  color: var(--sand);
+}
+
+.btn-link{
+  background: transparent;
+  color: var(--gold-bright);
+  width: auto;
+  padding: 8px;
+  font-size: 13px;
+  text-decoration: underline;
+}
+
+.btn-row{
+  display: flex;
+  gap: 10px;
+}
+
+.btn-row .btn{
+  width: auto;
+  flex: 1;
+}
+
+/* ============================================================
+   STAT GRID (Owner Control Center)
+============================================================ */
+.stat-grid{
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.stat-card{
+  border-radius: 18px;
+  padding: 16px;
+}
+
+.stat-label{
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--card-text-dim);
+  margin-bottom: 8px;
+}
+
+.stat-value{
+  font-size: 26px;
+  font-weight: 900;
+  color: var(--navy);
+  letter-spacing: -0.02em;
+}
+
+/* ============================================================
+   LISTS (roster / inventory)
+   app.js renders rows into these containers. The data-empty-label
+   attribute is read by app.js to show a friendly empty state.
+============================================================ */
+.roster-list,
+.inventory-list{
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 14px;
+}
+
+.roster-row,
+.inventory-row{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 11px 0;
+  border-bottom: 1px solid rgba(15, 26, 36, 0.1);
+}
+
+.roster-row:last-child,
+.inventory-row:last-child{
+  border-bottom: none;
+}
+
+.roster-row-name,
+.inventory-row-name{
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--navy);
+}
+
+.roster-row-meta,
+.inventory-row-meta{
+  font-size: 11.5px;
+  color: var(--card-text-dim);
+  margin-top: 2px;
+}
+
+.roster-row-status{
+  flex-shrink: 0;
+  padding: 5px 11px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.roster-row-status.status-active{
+  background: rgba(47, 122, 87, 0.15);
+  border: 1px solid rgba(47, 122, 87, 0.4);
+  color: var(--success);
+}
+
+.roster-row-status.status-inactive{
+  background: rgba(15, 26, 36, 0.08);
+  border: 1px solid rgba(15, 26, 36, 0.16);
+  color: var(--card-text-dim);
+}
+
+.list-empty-state{
+  text-align: center;
+  padding: 22px 10px;
+  color: var(--card-text-dim);
+  font-size: 13px;
+}
+
+/* ============================================================
+   DIGITAL PASS CARD (Parent / Guest)
+============================================================ */
+.digital-pass-card{
+  border-radius: 22px;
+  padding: 22px;
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.92), rgba(255, 255, 255, 0.82));
+}
+
+.digital-pass-label{
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--gold-text);
+  margin-bottom: 10px;
+}
+
+.digital-pass-name{
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--navy);
+  margin-bottom: 4px;
+}
+
+.digital-pass-tier{
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--card-text-dim);
+  margin-bottom: 16px;
+}
+
+.qr-placeholder{
+  width: 96px;
+  height: 96px;
+  border-radius: 14px;
+  background: rgba(15, 26, 36, 0.06);
+  border: 1.5px dashed rgba(15, 26, 36, 0.3);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  color: var(--card-text-dim);
+  margin: 0 auto;
+  padding: 8px;
+  text-align: center;
+}
+
+.qr-placeholder svg{
+  width: 28px;
+  height: 28px;
+  opacity: 0.55;
+  flex-shrink: 0;
+}
+
+.qr-placeholder-caption{
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  line-height: 1.3;
+}
+
+/* Camera-scanner mockup on the Staff dashboard — same dashed-box
+   treatment as qr-placeholder, stretched into a wide viewport. */
+.scanner-viewport{
+  width: 100%;
+  height: 170px;
+  margin: 14px auto 0 auto;
+  padding: 16px;
+}
+
+.scanner-viewport svg{
+  width: 34px;
+  height: 34px;
+}
+
+.scanner-viewport .qr-placeholder-caption{
+  font-size: 12px;
+}
+
+/* ============================================================
+   PROFILE ROWS (key/value display)
+============================================================ */
+.profile-row{
+  display: flex;
+  justify-content: space-between;
+  padding: 9px 0;
+  border-bottom: 1px solid rgba(15, 26, 36, 0.1);
+  font-size: 13.5px;
+}
+
+.profile-row:last-child{
+  border-bottom: none;
+}
+
+.profile-row-label{
+  color: var(--card-text-dim);
+  font-weight: 600;
+}
+
+.profile-row-value{
+  color: var(--navy);
+  font-weight: 800;
+  text-align: right;
+}
+
+/* ============================================================
+   BOTTOM TAB BAR
+============================================================ */
+.tab-bar{
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 50;
+  display: flex;
+  justify-content: space-between;
+  gap: 4px;
+  padding: 10px 10px calc(10px + var(--safe-bottom)) 10px;
+  border-radius: 26px 26px 0 0;
+  border-bottom: none;
+}
+
+.tab-btn{
+  flex: 1;
+  border: none;
+  background: transparent;
+  padding: 11px 4px;
+  border-radius: 16px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--card-text-dim);
+  cursor: pointer;
+  transition: background 0.3s var(--ease-apple), color 0.3s var(--ease-apple), transform 0.3s var(--ease-apple);
+}
+
+.tab-btn.active{
+  color: var(--navy);
+  background: rgba(197, 160, 89, 0.35);
+}
+
+.tab-btn:active{
+  transform: scale(0.96);
+}
+
+/* ============================================================
+   TOAST
+============================================================ */
+.toast{
+  position: fixed;
+  left: 50%;
+  bottom: calc(96px + var(--safe-bottom));
+  transform: translateX(-50%) translateY(20px);
+  z-index: 100;
+  max-width: 88vw;
+  padding: 12px 20px;
+  border-radius: 16px;
+  font-size: 13px;
+  font-weight: 700;
+  text-align: center;
+  color: var(--navy);
+  background: var(--glass-fill);
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
+  border: 1px solid var(--glass-border);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.35s var(--ease-apple), transform 0.35s var(--ease-apple);
+}
+
+.toast.show{
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+  pointer-events: auto;
+}
+
+/* ============================================================
+   MODAL (confirmation dialog)
+============================================================ */
+.modal-backdrop{
+  position: fixed;
+  inset: 0;
+  z-index: 150;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  background: rgba(10, 18, 26, 0.55);
+  padding: 18px;
+}
+
+.modal-backdrop.hidden{
+  display: none;
+}
+
+.modal-card{
+  width: 100%;
+  max-width: 440px;
+  border-radius: 22px;
+  padding: 22px;
+  margin-bottom: calc(18px + var(--safe-bottom));
+}
+
+.modal-title{
+  font-size: 17px;
+  font-weight: 800;
+  color: var(--navy);
+  margin-bottom: 8px;
+}
+
+.modal-body{
+  font-size: 13.5px;
+  color: var(--card-text-dim);
+  line-height: 1.5;
+  margin-bottom: 18px;
+}
+
+/* ============================================================
+   REDUCED MOTION
+============================================================ */
+@media (prefers-reduced-motion: reduce){
+  *{
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ============================================================
+   VISIBLE KEYBOARD FOCUS
+   Kept separate at the end so it always wins the cascade.
+============================================================ */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible{
+  outline: 2px solid var(--gold-bright);
+  outline-offset: 2px;
+}

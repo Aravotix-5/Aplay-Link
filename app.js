@@ -84,14 +84,15 @@ import { initPaymentWallet } from "./payment-wallet.js";
    secrets, Firebase Admin private keys, and any user passwords —
    none of those belong in client-side code, and none of them are
    needed for the email/password or Google sign-in flows below.
-============================================================ */
+============================================================ */// For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
-  apiKey: "YOUR_FIREBASE_API_KEY",
-  authDomain: "YOUR_AUTH_DOMAIN",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_STORAGE_BUCKET",
-  messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-  appId: "YOUR_APP_ID"
+  apiKey: "AIzaSyAFx-B8NTTLykCljJ-KURf2U4D0v-XpXQY",
+  authDomain: "aplay-dashboard.firebaseapp.com",
+  projectId: "aplay-dashboard",
+  storageBucket: "aplay-dashboard.firebasestorage.app",
+  messagingSenderId: "199024646802",
+  appId: "1:199024646802:web:962b434c4be9e8985c644b",
+  measurementId: "G-SBHJSJDP3F"
 };
 
 const firebaseApp = initializeApp(firebaseConfig);

@@ -196,7 +196,7 @@
           ("owner-staff") so app.js's scrollIntoView fallback lands here
           instead of failing with a "not available yet" toast.
         -->
-        <div id="owner-staff">
+        <div id="owner-staff" class="subsection-anchor">
           <div class="section-divider">Staff Roster</div>
           <div class="card glass">
             <!-- app.js renders one .roster-row per staff document in Firestore (users where role == "staff") -->
@@ -206,7 +206,7 @@
         </div>
 
         <!-- Anchor id matches the "Inventory" tab-bar button's data-target ("owner-inventory") -->
-        <div id="owner-inventory">
+        <div id="owner-inventory" class="subsection-anchor">
           <div class="section-divider">Inventory Management</div>
           <div class="card glass">
             <div id="ownerInventoryList" class="inventory-list" data-empty-label="No inventory items on file yet."></div>
@@ -215,7 +215,7 @@
         </div>
 
         <!-- Anchor id matches the "Settings" tab-bar button's data-target ("owner-settings") -->
-        <div id="owner-settings">
+        <div id="owner-settings" class="subsection-anchor">
           <div class="section-divider">Account Administration</div>
           <div class="card glass">
             <p class="card-note">
@@ -241,15 +241,17 @@
         <div class="card glass">
           <div class="card-title">Check-In / Check-Out</div>
           <div class="field">
-            <label for="staffScanInput">Guest Phone or Pass ID</label>
-            <input type="text" id="staffScanInput" placeholder="Scan QR or type phone number" />
+            <label for="staffScanInput">Guest Phone or Email</label>
+            <input type="text" id="staffScanInput" placeholder="Scan QR, or type a phone number or email" />
           </div>
           <div class="btn-row">
             <button type="button" id="staffCheckInBtn" class="btn btn-primary">Check In</button>
             <button type="button" id="staffCheckOutBtn" class="btn btn-secondary">Check Out</button>
           </div>
-          <!-- Future QR code support: a camera-based scanner will populate #staffScanInput automatically. -->
-          <button type="button" id="staffQrScanBtn" class="btn btn-link" disabled>Scan QR Code (coming soon)</button>
+          <!-- Real camera-based scanning isn't built yet — this button
+               only toggles the viewport mockup below so front-desk staff
+               can see where it will live once it ships. -->
+          <button type="button" id="staffQrScanBtn" class="btn btn-link">Preview Scanner Viewport</button>
 
           <!--
             Structured mockup of where the live camera scanner stream
@@ -257,7 +259,7 @@
             .qr-placeholder box treatment (see styles.css) sized up
             into a viewport, so no new theme is introduced.
           -->
-          <div class="qr-placeholder scanner-viewport" id="staffQrScannerMockup" aria-label="Camera scanner viewport placeholder">
+          <div class="qr-placeholder scanner-viewport hidden" id="staffQrScannerMockup" aria-label="Camera scanner viewport placeholder">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
               <path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/>
               <path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/>
@@ -268,7 +270,7 @@
         </div>
 
         <!-- Anchor id matches the "Guests" tab-bar button's data-target ("staff-guests") -->
-        <div id="staff-guests">
+        <div id="staff-guests" class="subsection-anchor">
           <div class="section-divider">Currently Checked In</div>
           <div class="card glass">
             <div id="staffActiveGuestList" class="roster-list" data-empty-label="No guests currently checked in."></div>
@@ -276,7 +278,7 @@
         </div>
 
         <!-- Anchor id matches the "Inventory" tab-bar button's data-target ("staff-inventory") -->
-        <div id="staff-inventory">
+        <div id="staff-inventory" class="subsection-anchor">
           <div class="section-divider">Inventory Quick View</div>
           <div class="card glass">
             <div id="staffInventoryList" class="inventory-list" data-empty-label="No inventory items on file yet."></div>
@@ -311,7 +313,7 @@
         </div>
 
         <!-- Anchor id matches the "Storefront" tab-bar button's data-target ("parent-storefront") -->
-        <div id="parent-storefront">
+        <div id="parent-storefront" class="subsection-anchor">
           <div class="section-divider">Storefront</div>
           <div class="card glass">
             <p class="card-note">
@@ -330,7 +332,7 @@
         </div>
 
         <!-- Anchor id matches the "History" tab-bar button's data-target ("parent-history") -->
-        <div id="parent-history">
+        <div id="parent-history" class="subsection-anchor">
           <div class="section-divider">Visit History</div>
           <div class="card glass">
             <div id="parentVisitHistory" class="roster-list" data-empty-label="No visits recorded yet."></div>
@@ -364,7 +366,7 @@
         </div>
 
         <!-- Anchor id matches the "Zones" tab-bar button's data-target ("guest-zones") -->
-        <div id="guest-zones">
+        <div id="guest-zones" class="subsection-anchor">
           <div class="section-divider">Today's Zones</div>
           <div class="card glass">
             <div id="guestZoneInfo" class="card-note">Zone status loads once you're signed in.</div>

@@ -28,7 +28,27 @@ import {
   collection,
   addDoc,
   serverTimestamp
-} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+} from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+/* ============================================================
+   SQUARE CONFIGURATION (PLACEHOLDERS)
+   The Application ID and Location ID below are the two values the
+   Square Web Payments SDK needs client-side to even load a card
+   form — Square's own docs confirm both are safe to ship in a
+   public repo, the same way a Firebase apiKey is.
+
+   A Square PRODUCTION ACCESS TOKEN (or any Square access token) is
+   a different thing entirely — it's a real secret that can move
+   money, and it must NEVER live in this file or anywhere else in
+   the browser bundle. It belongs in a server-side environment (a
+   Firebase Cloud Function's config, a secrets manager, etc.) that
+   this frontend calls into once payments actually go live. There
+   is intentionally no "SQUARE_ACCESS_TOKEN" placeholder here —
+   adding one, even empty, would invite someone to paste a real
+   token into client code later.
+============================================================ */
+const SQUARE_APPLICATION_ID = "YOUR_SQUARE_APPLICATION_ID";
+const SQUARE_LOCATION_ID = "YOUR_SQUARE_LOCATION_ID";
 
 /* ============================================================
    MODULE STATE
@@ -44,8 +64,8 @@ let _showToast = (message) => console.log("[payment-wallet]", message);
 /**
  * initPaymentWallet
  * Called once from app.js after Firebase is initialized.
- * @param {{ db: import("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js").Firestore,
- *           auth: import("https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js").Auth,
+ * @param {{ db: import("https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js").Firestore,
+ *           auth: import("https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js").Auth,
  *           showToast: (message: string) => void }} context
  */
 export function initPaymentWallet(context){
@@ -156,11 +176,12 @@ export function initGooglePaySession(orderInput){
 /**
  * initSquareCheckout
  * TODO (future payment integration): implement using the Square Web
- * Payments SDK once A-Play has a Square application ID and location
- * ID. Square access tokens must never be embedded in this file —
- * card processing has to go through a Cloud Function or other
- * server-side endpoint that holds the token, per the project's
- * "no sensitive credentials in client code" requirement.
+ * Payments SDK, loaded with SQUARE_APPLICATION_ID and SQUARE_LOCATION_ID
+ * above once real values replace the placeholders. Actual card
+ * tokenization still has to be completed by a server-side endpoint
+ * holding the real Square access token — see the SQUARE CONFIGURATION
+ * comment near the top of this file for why that token can never live
+ * here.
  * @param {{ uid: string, items: Array }} orderInput
  * @returns {Promise<never>}
  */

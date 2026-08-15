@@ -313,6 +313,15 @@ img{
   color: var(--gold-bright);
 }
 
+/* Wraps each tab-bar sub-section target (owner-staff, staff-guests,
+   parent-history, etc.). scroll-margin-top keeps scrollIntoView()
+   from placing the heading flush against the very top edge of
+   #viewRoot — a little breathing room reads as an intentional
+   landing spot rather than an abrupt jump cut. */
+.subsection-anchor{
+  scroll-margin-top: 16px;
+}
+
 .section-divider::after{
   content: "";
   flex: 1;

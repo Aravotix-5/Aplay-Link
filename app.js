@@ -13,10 +13,13 @@
    FIRESTORE DATA MODEL (documented here since there is no backend
    README in this project yet):
      users/{uid}
-       - fullName:   string
+       - name:       string
        - phone:      string
        - email:      string
        - role:       "owner" | "staff" | "parent" | "guest"
+       - accountType: same value as role, kept as a separate field
+                       per the project's Firestore field requirements
+       - isActive:   boolean (true unless an owner deactivates the account)
        - childProfile?: { fullName, age, weight, pass: { name, price } }
        - passTier?:  { name, price }          (guest role only)
        - createdAt:  server timestamp
@@ -61,14 +64,21 @@ import {
 import { initPaymentWallet } from "./payment-wallet.js";
 
 /* ============================================================
-   FIREBASE CONFIGURATION
-   These values (apiKey, authDomain, projectId, storageBucket,
-   messagingSenderId, appId, measurementId) are safe to ship in
-   client-side code by design — Firebase's own docs are explicit
-   about this. They only identify which Firebase project a request
-   belongs to; they grant no access on their own. Actual access
-   control lives in Firestore Security Rules and in the "Authorized
-   domains" list under Firebase Console > Authentication > Settings.
+   FIREBASE CONFIGURATION (PLACEHOLDERS)
+   Replace every value below with the config object from your
+   Firebase project settings (Project settings > General > Your
+   apps > SDK setup and configuration).
+
+   Note for context: apiKey, authDomain, projectId, storageBucket,
+   messagingSenderId, and appId are all safe to ship in client-side
+   code by design — Firebase's own docs are explicit that these only
+   identify which Firebase project a request belongs to and grant no
+   access on their own. Real access control lives in Firestore
+   Security Rules and in the "Authorized domains" list under Firebase
+   Console > Authentication > Settings. They're placeholders here
+   because this file is going into a public repo and the values
+   should come from whoever owns the live Firebase project, not be
+   baked in by whoever last touched this file.
 
    Intentionally absent from this file, by design: OAuth client
    secrets, Firebase Admin private keys, and any user passwords —
@@ -76,13 +86,12 @@ import { initPaymentWallet } from "./payment-wallet.js";
    needed for the email/password or Google sign-in flows below.
 ============================================================ */
 const firebaseConfig = {
-  apiKey: "AIzaSyAFx-B8NTTLykCljJ-KURf2U4D0v-XpXQY",
-  authDomain: "aplay-dashboard.firebaseapp.com",
-  projectId: "aplay-dashboard",
-  storageBucket: "aplay-dashboard.firebasestorage.app",
-  messagingSenderId: "199024646802",
-  appId: "1:199024646802:web:962b434c4be9e8985c644b",
-  measurementId: "G-SBHJSJDP3F"
+  apiKey: "YOUR_FIREBASE_API_KEY",
+  authDomain: "YOUR_AUTH_DOMAIN",
+  projectId: "YOUR_PROJECT_ID",
+  storageBucket: "YOUR_STORAGE_BUCKET",
+  messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+  appId: "YOUR_APP_ID"
 };
 
 const firebaseApp = initializeApp(firebaseConfig);
@@ -90,15 +99,13 @@ export const auth = getAuth(firebaseApp);
 export const db = getFirestore(firebaseApp);
 export const googleProvider = new GoogleAuthProvider();
 
-/* This Google Cloud OAuth Web Client ID is NOT passed into
-   GoogleAuthProvider — signInWithPopup() below uses the OAuth
-   client that Firebase automatically provisions once "Google" is
-   enabled as a sign-in provider in the Firebase Console, and that's
-   all a client-side popup flow needs. This constant is kept here,
-   unused for now, for the day this project adds Google One Tap or
-   a Cloud Function that verifies Google ID tokens server-side —
-   both of those DO need the raw client ID on hand. */
-const GOOGLE_CLIENT_ID = "249842806211-59ffnpuva8m5sh5nb4epfrhrqrgc83vd.apps.googleusercontent.com";
+/* Google Sign-In (signInWithPopup + GoogleAuthProvider below) does
+   NOT need a separate OAuth Client ID configured in this file —
+   Firebase automatically provisions and uses its own OAuth client
+   the moment "Google" is enabled as a sign-in provider in the
+   Firebase Console (Authentication > Sign-in method). That's the
+   one setup step required for the "Sign in with Google" button in
+   index.html to work; nothing else needs to change here. */
 
 /* ============================================================
    DOM REFERENCES
@@ -155,6 +162,8 @@ const ownerAddInventoryBtn = document.getElementById("ownerAddInventoryBtn");
 const staffScanInput = document.getElementById("staffScanInput");
 const staffCheckInBtn = document.getElementById("staffCheckInBtn");
 const staffCheckOutBtn = document.getElementById("staffCheckOutBtn");
+const staffQrScanBtn = document.getElementById("staffQrScanBtn");
+const staffQrScannerMockup = document.getElementById("staffQrScannerMockup");
 const staffActiveGuestList = document.getElementById("staffActiveGuestList");
 const staffInventoryList = document.getElementById("staffInventoryList");
 
@@ -221,30 +230,43 @@ function showTabBarForRole(role){
 
 /* Wire every tab button once, at module load. A button either
    targets a real top-level view ("view-owner", "view-staff", ...)
-   or a named sub-section that does not have its own view yet
-   (e.g. "owner-inventory"). For the latter we gracefully no-op
-   with a toast rather than guessing at markup that does not
-   exist in index.html. */
+   or a named sub-section anchored inside that role's single view
+   (e.g. "owner-inventory" lives inside "view-owner"). */
 tabBars.forEach(bar => {
   const buttons = Array.from(bar.querySelectorAll(".tab-btn"));
   buttons.forEach(btn => {
     btn.addEventListener("click", () => {
       buttons.forEach(b => b.classList.toggle("active", b === btn));
       const target = btn.dataset.target;
-      if(target && target.startsWith("view-")){
+      if(!target) return;
+
+      if(target.startsWith("view-")){
         showView(target);
-      }else{
-        // Sub-section navigation (staff list, inventory, storefront, etc.)
-        // is scoped to the current dashboard view; scroll to it if a
-        // matching element exists, otherwise let the user know it's
-        // not wired up to a dedicated screen yet.
-        const anchor = document.getElementById(target);
-        if(anchor){
-          anchor.scrollIntoView({ behavior: "smooth", block: "start" });
-        }else{
-          showToast("That section isn't available yet");
-        }
+        return;
       }
+
+      // Sub-section navigation (staff list, inventory, storefront, etc.).
+      const anchor = document.getElementById(target);
+      if(!anchor){
+        showToast("That section isn't available yet");
+        return;
+      }
+
+      // scrollIntoView() is a silent no-op on an element sitting inside
+      // a `display: none` ancestor — and every .view without the
+      // "active" class is exactly that (see styles.css). Make sure the
+      // view containing this anchor is actually the active, visible
+      // one *before* asking the browser to scroll to it.
+      const parentView = anchor.closest(".view");
+      if(parentView && !parentView.classList.contains("active")){
+        showView(parentView.id);
+      }
+
+      // Wait one frame so the layout reflects the now-visible view
+      // before measuring scroll position.
+      requestAnimationFrame(() => {
+        anchor.scrollIntoView({ behavior: "smooth", block: "start" });
+      });
     });
   });
 });
@@ -323,14 +345,26 @@ googleSignInBtn.addEventListener("click", async () => {
     if(!existingSnap.exists()){
       // First time this Google account has signed in — provision a
       // "parent" profile, same default role as self-service email
-      // registration. Google doesn't provide a phone number, so that
-      // field starts blank; front-desk staff can fill it in later,
-      // since there's no "complete your profile" screen yet.
+      // registration. Google doesn't supply a phone number, and the
+      // Staff dashboard's check-in/out lookup needs *some* identifier
+      // to find this guest at the door, so ask for one now rather than
+      // leaving it silently blank. Skipping this prompt is fine — the
+      // check-in lookup also matches by email, so a blank phone number
+      // doesn't strand this guest.
+      const phoneRaw = window.prompt(
+        `Welcome, ${result.user.displayName || result.user.email}! ` +
+        "Add a phone number so front-desk staff can check you in " +
+        "(optional — you can skip this and staff can look you up by email instead):"
+      );
+      const phone = normalizePhone(sanitizePromptText(phoneRaw) || "");
+
       await setDoc(userRef, {
-        fullName: result.user.displayName || result.user.email,
-        phone: "",
-        email: result.user.email,
+        name: result.user.displayName || result.user.email,
+        phone,
+        email: (result.user.email || "").toLowerCase(),
         role: "parent",
+        accountType: "parent",
+        isActive: true,
         createdAt: serverTimestamp()
       });
     }
@@ -342,7 +376,14 @@ googleSignInBtn.addEventListener("click", async () => {
       return;
     }
     console.error("A-Play: Google sign-in failed.", err);
-    loginFormError.textContent = friendlyAuthError(err);
+    const message = friendlyAuthError(err);
+    loginFormError.textContent = message;
+    // Domain/provider misconfiguration is easy to miss as inline form
+    // text and is exactly the kind of thing whoever is setting up this
+    // project needs to notice immediately — surface it as a toast too.
+    if(err && (err.code === "auth/unauthorized-domain" || err.code === "auth/operation-not-allowed")){
+      showToast(message);
+    }
   }finally{
     googleSignInBtn.disabled = false;
   }
@@ -367,10 +408,12 @@ registerForm.addEventListener("submit", async (event) => {
     );
 
     await setDoc(doc(db, "users", credential.user.uid), {
-      fullName: registerFullName.value.trim(),
-      phone: registerPhone.value.trim(),
-      email: registerEmail.value.trim(),
+      name: registerFullName.value.trim(),
+      phone: normalizePhone(registerPhone.value),
+      email: registerEmail.value.trim().toLowerCase(),
       role: "parent",
+      accountType: "parent",
+      isActive: true,
       createdAt: serverTimestamp()
     });
 
@@ -394,6 +437,8 @@ function friendlyAuthError(err){
     case "auth/weak-password": return "Choose a password with at least 8 characters.";
     case "auth/popup-blocked": return "Your browser blocked the Google sign-in popup — please allow popups and try again.";
     case "auth/account-exists-with-different-credential": return "That email is already linked to a different sign-in method. Try email and password instead.";
+    case "auth/unauthorized-domain": return "This site's domain isn't authorized for Google sign-in yet — add it under Firebase Console > Authentication > Settings > Authorized domains.";
+    case "auth/operation-not-allowed": return "Google sign-in isn't enabled for this project yet — turn it on under Firebase Console > Authentication > Sign-in method.";
     default: return "Something went wrong. Please try again.";
   }
 }
@@ -445,7 +490,7 @@ onAuthStateChanged(auth, async (user) => {
     }
 
     const profile = userSnap.data();
-    userChipName.textContent = profile.fullName || user.email;
+    userChipName.textContent = profile.name || user.email;
     userChipRole.textContent = profile.role || "guest";
     userChip.classList.remove("hidden");
 
@@ -498,7 +543,7 @@ function startOwnerListeners(){
   const unsubStaff = onSnapshot(staffQuery, (snapshot) => {
     ownerStatStaff.textContent = String(snapshot.size);
     renderRosterList(ownerStaffList, snapshot.docs.map(d => ({
-      name: d.data().fullName || d.data().email,
+      name: d.data().name || d.data().email,
       meta: d.data().email,
       active: true
     })));
@@ -551,7 +596,28 @@ function sanitizePromptText(raw){
   return trimmed.length > 0 ? trimmed : null;
 }
 
+/* Strips everything except digits so phone numbers typed or stored in
+   different formats ("(555) 214-7790" vs "5552147790" vs "555.214.7790")
+   still compare equal. Applied both when a phone number is *saved*
+   (registration, Google sign-in follow-up) and when one is *looked up*
+   (staff check-in/out) so the two sides of the comparison always agree. */
+function normalizePhone(raw){
+  return (raw || "").replace(/[^0-9]/g, "");
+}
+
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+/* Staff at the front desk may have a guest's email or their phone
+   number on hand — not always both. Build the right Firestore query
+   for whichever one was typed instead of assuming phone every time. */
+function buildGuestLookupQuery(rawInput){
+  const trimmed = (rawInput || "").trim();
+  if(EMAIL_PATTERN.test(trimmed)){
+    return query(collection(db, "users"), where("email", "==", trimmed.toLowerCase()));
+  }
+  const digitsOnly = normalizePhone(trimmed);
+  return query(collection(db, "users"), where("phone", "==", digitsOnly));
+}
 
 ownerInviteStaffBtn.addEventListener("click", async () => {
   const email = sanitizePromptText(window.prompt("Email address for the new staff member:"));
@@ -585,7 +651,15 @@ ownerAddInventoryBtn.addEventListener("click", async () => {
 
   const priceRaw = window.prompt("Price (USD):");
   if(priceRaw === null) return; // user cancelled — do not silently default to $0
-  const price = Number(priceRaw);
+  const priceText = priceRaw.trim();
+  // Number("   ") is 0 in JavaScript, not NaN — a whitespace-only entry
+  // would otherwise sail through as a "valid" $0.00 item. Reject it
+  // explicitly before it ever reaches Number().
+  if(priceText.length === 0){
+    showToast("Enter a price to add this item");
+    return;
+  }
+  const price = Number(priceText);
   if(!Number.isFinite(price) || price < 0){
     showToast("Enter a valid, non-negative price to add this item");
     return;
@@ -595,8 +669,11 @@ ownerAddInventoryBtn.addEventListener("click", async () => {
 
   const quantityRaw = window.prompt("Starting quantity:");
   if(quantityRaw === null) return; // user cancelled
-  const parsedQuantity = Number(quantityRaw);
-  const quantity = Number.isFinite(parsedQuantity) && parsedQuantity >= 0 ? parsedQuantity : 0;
+  const quantityText = quantityRaw.trim();
+  const parsedQuantity = Number(quantityText);
+  const quantity = quantityText.length > 0 && Number.isFinite(parsedQuantity) && parsedQuantity >= 0
+    ? parsedQuantity
+    : 0;
 
   try{
     await addDoc(collection(db, "inventory"), {
@@ -638,21 +715,32 @@ function startStaffListeners(){
   activeUnsubscribers.push(unsubCheckins);
 }
 
+/* Real camera-based QR scanning isn't implemented yet. This button
+   only reveals/hides the structural mockup so staff can see where
+   that feature will live — it never claims to actually scan
+   anything, to stay honest about what's real in this build versus
+   what's still planned (same pattern as the Apple Pay / Google Pay /
+   Square stubs in payment-wallet.js). */
+staffQrScanBtn.addEventListener("click", () => {
+  const isHidden = staffQrScannerMockup.classList.toggle("hidden");
+  staffQrScanBtn.textContent = isHidden ? "Preview Scanner Viewport" : "Hide Scanner Viewport";
+});
+
 staffCheckInBtn.addEventListener("click", async () => {
-  const phoneInput = staffScanInput.value.trim();
-  if(!phoneInput){
-    showToast("Enter a guest phone number or pass ID first");
+  const rawInput = staffScanInput.value.trim();
+  if(!rawInput){
+    showToast("Enter a guest phone number or email first");
     return;
   }
   try{
-    const usersQuery = query(collection(db, "users"), where("phone", "==", phoneInput));
+    const usersQuery = buildGuestLookupQuery(rawInput);
     const snapshot = await getDocsOnce(usersQuery);
     if(snapshot.empty){
-      showToast("No guest found with that phone number");
+      showToast("No guest found with that phone number or email");
       return;
     }
     const guestDoc = snapshot.docs[0];
-    const guestName = guestDoc.data().fullName || "Guest";
+    const guestName = guestDoc.data().name || "Guest";
 
     await addDoc(collection(db, "checkins"), {
       guestId: guestDoc.id,
@@ -671,16 +759,16 @@ staffCheckInBtn.addEventListener("click", async () => {
 });
 
 staffCheckOutBtn.addEventListener("click", async () => {
-  const queryValue = staffScanInput.value.trim();
-  if(!queryValue){
-    showToast("Enter a guest phone number or pass ID first");
+  const rawInput = staffScanInput.value.trim();
+  if(!rawInput){
+    showToast("Enter a guest phone number or email first");
     return;
   }
   try{
-    const usersQuery = query(collection(db, "users"), where("phone", "==", queryValue));
+    const usersQuery = buildGuestLookupQuery(rawInput);
     const userSnapshot = await getDocsOnce(usersQuery);
     if(userSnapshot.empty){
-      showToast("No guest found with that phone number");
+      showToast("No guest found with that phone number or email");
       return;
     }
     const guestId = userSnapshot.docs[0].id;
@@ -756,7 +844,7 @@ function startParentHistoryListener(uid){
    GUEST DASHBOARD
 ============================================================ */
 function renderGuestDashboard(profile){
-  guestPassName.textContent = profile.fullName || "Guest";
+  guestPassName.textContent = profile.name || "Guest";
   guestPassTier.textContent = profile.passTier
     ? `${profile.passTier.name} — $${Number(profile.passTier.price).toFixed(2)}`
     : "No pass on file";
